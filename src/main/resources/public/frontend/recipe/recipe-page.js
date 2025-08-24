@@ -16,14 +16,35 @@ window.addEventListener("DOMContentLoaded", () => {
      * - Admin link and logout button
      * - Search input
     */
+    const adminLink = document.getElementById("admin-link");
+    const logoutButton = document.getElementById("logout-button");
+    const recipeList = document.getElementById("recipe-list");
+    const searchInput = document.getElementById("search-input");
+    const searchButton = document.getElementById("search-button");
+    const addNameInput = document.getElementById("add-recipe-name-input");
+    const addInstructionsInput = document.getElementById("add-recipe-instructions-input");
+    const addSubmitButton = document.getElementById("add-recipe-submit-input");
+    const updateNameInput = document.getElementById("update-recipe-name-input");
+    const updateInstructionsInput = document.getElementById("update-recipe-instructions-input");
+    const updateSubmitButton = document.getElementById("update-recipe-submit-input");
+    const deleteNameInput = document.getElementById("delete-recipe-name-input");
+    const deleteSubmitButton = document.getElementById("delete-recipe-submit-input");
 
     /*
      * TODO: Show logout button if auth-token exists in sessionStorage
      */
+    const token = sessionStorage.getItem("auth-token");
+    if (token) {
+        logoutButton.style.display = "inline-block";
+    }
 
     /*
      * TODO: Show admin link if is-admin flag in sessionStorage is "true"
      */
+    const isAdmin = sessionStorage.getItem("is-admin");
+    if (isAdmin === "true") {
+        adminLink.style.display = "inline-block";
+    }
 
     /*
      * TODO: Attach event handlers
@@ -33,11 +54,16 @@ window.addEventListener("DOMContentLoaded", () => {
      * - Search button → searchRecipes()
      * - Logout button → processLogout()
      */
+    searchButton.addEventListener("click", searchRecipes);
+    addSubmitButton.addEventListener("click", addRecipe);
+    updateSubmitButton.addEventListener("click", updateRecipe);
+    deleteSubmitButton.addEventListener("click", deleteRecipe);
+    logoutButton.addEventListener("click", processLogout);
 
     /*
      * TODO: On page load, call getRecipes() to populate the list
      */
-
+    window.onload = getRecipes;
 
     /**
      * TODO: Search Recipes Function
@@ -48,6 +74,22 @@ window.addEventListener("DOMContentLoaded", () => {
      */
     async function searchRecipes() {
         // Implement search logic here
+        try {
+            const term = searchInput.value;
+            const response = await fetch(`${BASE_URL}/recipes?name=${encodeURIComponent(term)}`, {
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                recipes = await response.json();
+                refreshRecipeList();
+            } else {
+                alert("Failed to search recipes.");
+            }
+        } catch (err) {
+            console.error("Search Error:", err);
+            alert("An error occurred.");
+        }
     }
 
     /**
@@ -60,6 +102,35 @@ window.addEventListener("DOMContentLoaded", () => {
      */
     async function addRecipe() {
         // Implement add logic here
+        const name = addNameInput.value;
+        const instructions = addInstructionsInput.value;
+
+        if (!name || !instructions) {
+            alert("Please enter both name and instructions!");
+            return;
+        }
+
+        try {
+            const response = await fetch(`${BASE_URL}/recipes`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify({ name, instructions })
+            });
+
+            if (response.ok) {
+                addNameInput.value = "";
+                addInstructionsInput.value = "";
+                await getRecipes();
+            } else {
+                alert("Failed to add recipe.");
+            }
+        } catch (err) {
+            console.error("Add Error:", err);
+            alert("An error occurred.");
+        }
     }
 
     /**
@@ -72,6 +143,41 @@ window.addEventListener("DOMContentLoaded", () => {
      */
     async function updateRecipe() {
         // Implement update logic here
+        const name = updateNameInput.value;
+        const instructions = updateInstructionsInput.value;
+
+        if (!name || !instructions) {
+            alert("Please enter both name and new instructions!");
+            return;
+        }
+
+        const recipe = recipes.find(r => r.name.toLowerCase() === name.toLowerCase());
+        if (!recipe) {
+            alert("Unable to find recipe!");
+            return;
+        }
+
+        try {
+            const response = await fetch(`${BASE_URL}/recipes/${recipe.id}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify({ name, instructions })
+            });
+
+            if (response.ok) {
+                updateNameInput.value = "";
+                updateInstructionsInput.value = "";
+                await getRecipes();
+            } else {
+                alert("Failed to update recipe.");
+            }
+        } catch (err) {
+            console.error("Update Error:", err);
+            alert("An error occurred.");
+        }
     }
 
     /**
@@ -83,6 +189,35 @@ window.addEventListener("DOMContentLoaded", () => {
      */
     async function deleteRecipe() {
         // Implement delete logic here
+        const name = deleteNameInput.value;
+
+        if (!name) {
+            alert("Please enter the recipe name to delete!");
+            return;
+        }
+
+        const recipe = recipes.find(r => r.name.toLowerCase() === name.toLowerCase());
+        if (!recipe) {
+            alert("Unable to find recipe!");
+            return;
+        }
+
+        try {
+            const response = await fetch(`${BASE_URL}/recipes/${recipe.id}`, {
+                method: "DELETE",
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                deleteNameInput.value = "";
+                await getRecipes();
+            } else {
+                alert("Failed to delete recipe.");
+            }
+        } catch (err) {
+            console.error("Delete Error:", err);
+            alert("An error occurred.");
+        }
     }
 
     /**
@@ -93,6 +228,21 @@ window.addEventListener("DOMContentLoaded", () => {
      */
     async function getRecipes() {
         // Implement get logic here
+        try {
+            const response = await fetch(`${BASE_URL}/recipes`, {
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                recipes = await response.json();
+                refreshRecipeList();
+            } else {
+                alert("Failed to get recipes.");
+            }
+        } catch (err) {
+            console.error("Get Error:", err);
+            alert("An error occurred.");
+        }
     }
 
     /**
@@ -103,6 +253,12 @@ window.addEventListener("DOMContentLoaded", () => {
      */
     function refreshRecipeList() {
         // Implement refresh logic here
+        recipeList.innerHTML = "";
+        recipes.forEach(recipe => {
+            const li = document.createElement("li");
+            li.textContent = `${recipe.name}: ${recipe.instructions}`;
+            recipeList.appendChild(li);
+        });
     }
 
     /**
@@ -114,6 +270,23 @@ window.addEventListener("DOMContentLoaded", () => {
      */
     async function processLogout() {
         // Implement logout logic here
+        try {
+            const response = await fetch(`${BASE_URL}/logout`, {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                sessionStorage.clear();
+                alert("Logged out successfully!");
+                window.location.href = "../login/login.html";
+            } else {
+                alert("Logout failed.");
+            }
+        } catch (err) {
+            console.error("Logout Error:", err);
+            alert("An error occurred.");
+        }
     }
 
 });

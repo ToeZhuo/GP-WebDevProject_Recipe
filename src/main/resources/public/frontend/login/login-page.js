@@ -11,12 +11,15 @@ const BASE_URL = "http://localhost:8081"; // backend URL
  * - login button
  * - logout button (optional, for token testing)
  */
-
+const usernameInput = document.getElementById("login-input");
+const passwordInput = document.getElementById("password-input");
+const loginButton = document.getElementById("login-button");
+const logoutButton = document.getElementById("logout-button");
 /* 
  * TODO: Add click event listener to login button
  * - Call processLogin on click
  */
-
+loginButton.addEventListener("click", processLogin);
 
 /**
  * TODO: Process Login Function
@@ -42,9 +45,15 @@ const BASE_URL = "http://localhost:8081"; // backend URL
 async function processLogin() {
     // TODO: Retrieve username and password from input fields
     // - Trim input and validate that neither is empty
+    const username = usernameInput.value;
+    const password = passwordInput.value;
 
+    if (!username || !password) {
+        alert("Please enter both username and password!");
+        return;
+    }
     // TODO: Create a requestBody object with username and password
-
+    const requestBody = { username, password };
     const requestOptions = {
         method: "POST",
         mode: "cors",
@@ -62,27 +71,47 @@ async function processLogin() {
 
     try {
         // TODO: Send POST request to http://localhost:8081/login using fetch with requestOptions
-
+        const response = await fetch(`${BASE_URL}/login`, requestOptions);
         // TODO: If response status is 200
-        // - Read the response as text
-        // - Response will be a space-separated string: "token123 true"
-        // - Split the string into token and isAdmin flag
-        // - Store both in sessionStorage using sessionStorage.setItem()
+        if (response.ok) {
+            // - Read the response as text
+            // - Response will be a space-separated string: "token123 true"
+            // - Split the string into token and isAdmin flag
+            // - Store both in sessionStorage using sessionStorage.setItem()
+            const text = await response.text();
+            const [token, isAdmin] = text.split(" ");
 
-        // TODO: Optionally show the logout button if applicable
+            sessionStorage.setItem("auth-token", token);
+            sessionStorage.setItem("is-admin", isAdmin);
 
-        // TODO: Add a small delay (e.g., 500ms) using setTimeout before redirecting
-        // - Use window.location.href to redirect to the recipe page
+            // console.log("HHHHHHHHHHHHHHHHHHHHHHHHH", token);
+            // console.log("HHHHHHHHHHHHHHHHHHHHHHHHH", isAdmin);
+            // console.log("HHHHHHHHHHHHHHHHHHHHHHHHH", sessionStorage);
 
+            // TODO: Optionally show the logout button if applicable
+            logoutButton.style.display = "inline-block";
+            // TODO: Add a small delay (e.g., 500ms) using setTimeout before redirecting
+            // - Use window.location.href to redirect to the recipe page
+            setTimeout(() => {
+                window.location.href = "../recipe/recipe-page.html";
+            }, 500);
+        }
         // TODO: If response status is 401
-        // - Alert the user with "Incorrect login!"
-
+        else if (response.status === 401) {
+            // - Alert the user with "Incorrect login!"
+            alert("Incorrect login!");
+        }
         // TODO: For any other status code
-        // - Alert the user with a generic error like "Unknown issue!"
+        else {
+            // - Alert the user with a generic error like "Unknown issue!"
+            alert("Unknown issue!");
+        }
 
     } catch (error) {
         // TODO: Handle any network or unexpected errors
         // - Log the error and alert the user
+        console.error("Login Error:", error);
+        alert("An error occurred.");
     }
 }
 
